@@ -1,0 +1,42 @@
+---
+- name: Change Apache Port
+  hosts: webservers
+  become: yes
+
+  vars:
+    apache_port: 8080
+
+  tasks:
+
+    - name: Ensure Apache is installed
+      apt:
+        name: apache2
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Change Apache listen port
+      lineinfile:
+        path: /etc/apache2/ports.conf
+        regexp: '^Listen '
+        line: "Listen {{ apache_port }}"
+        state: present
+        backup: yes
+
+    - name: Update default VirtualHost to new port
+      replace:
+        path: /etc/apache2/sites-available/000-default.conf
+        regexp: '(<VirtualHost \*:)(\d+)(>)'
+        replace: '\g<1>{{ apache_port }}\g<3>'
+        backup: yes
+
+    - name: Allow the new port through the firewall (if UFW is used)
+      ufw:
+        rule: allow
+        port: "{{ apache_port }}"
+        proto: tcp
+      ignore_errors: yes  # Optional: skip if UFW is not installed
+
+    - name: Restart Apache to apply changes
+      service:
+        name: apache2
+        state: restarted

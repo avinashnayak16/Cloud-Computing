@@ -1,0 +1,48 @@
+---
+- name: Nginx Configuration Management with Ansible
+  hosts: webservers
+  become: yes
+
+  vars:
+    nginx_custom_index: |
+      <html>
+      <head><title>Welcome to Ansible-managed Nginx!</title></head>
+      <body>
+        <h1>Configuration managed by Ansible</h1>
+        <p>Deployment successful 🎉</p>
+      </body>
+      </html>
+    nginx_port: 8080
+
+  tasks:
+    - name: Install Nginx
+      apt:
+        name: nginx
+        state: present
+        update_cache: yes
+
+    - name: Ensure Nginx is started and enabled
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+
+    - name: Change Nginx port to {{ nginx_port }}
+      replace:
+        path: /etc/nginx/sites-available/default
+        regexp: 'listen\s+80\s+default_server;'
+        replace: 'listen {{ nginx_port }} default_server;'
+        backup: yes
+
+    - name: Reload Nginx to apply port change
+      service:
+        name: nginx
+        state: reloaded
+
+    - name: Create custom index.html
+      copy:
+        content: "{{ nginx_custom_index }}"
+        dest: /var/www/html/index.html
+        owner: www-data
+        group: www-data
+        mode: '0644'

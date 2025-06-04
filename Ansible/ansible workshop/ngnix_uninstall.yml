@@ -1,0 +1,28 @@
+---
+- name: Uninstall Nginx from webservers
+  hosts: webservers
+  become: yes
+
+  tasks:
+    - name: Stop Nginx service
+      service:
+        name: nginx
+        state: stopped
+        enabled: no
+
+    - name: Uninstall Nginx package
+      apt:
+        name: nginx
+        state: absent
+        purge: yes
+        autoremove: yes
+        update_cache: yes
+
+    - name: Remove Nginx configuration and web content
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/nginx
+        - /var/www/html
+        - /var/log/nginx

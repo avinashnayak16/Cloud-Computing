@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MicroDefender - Microservices Tower Defense</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #0f0f23, #1a1a3e);
+            color: #00ff41;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .game-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3), transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3), transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(120, 219, 226, 0.2), transparent 50%);
+        }
+
+        .hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            border-bottom: 2px solid #00ff41;
+        }
+
+        .score-board {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #00ff41;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        .game-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-shadow: 0 0 10px #00ff41;
+        }
+
+        .game-board {
+            position: absolute;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            height: 500px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid #00ff41;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .service-slot {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            border: 2px dashed #333;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(0, 255, 65, 0.1);
+        }
+
+        .service-slot:hover {
+            border-color: #00ff41;
+            background: rgba(0, 255, 65, 0.2);
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+        }
+
+        .service {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            animation: pulse 2s infinite;
+        }
+
+        .service.auth {
+            background: linear-gradient(45deg, #ff6b6b, #ff8e8e);
+            box-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
+        }
+
+        .service.user {
+            background: linear-gradient(45deg, #4ecdc4, #45b7b8);
+            box-shadow: 0 0 20px rgba(78, 205, 196, 0.5);
+        }
+
+        .service.gateway {
+            background: linear-gradient(45deg, #ffe66d, #ffeb3b);
+            box-shadow: 0 0 20px rgba(255, 230, 109, 0.5);
+        }
+
+        .service.database {
+            background: linear-gradient(45deg, #a8e6cf, #7fdbda);
+            box-shadow: 0 0 20px rgba(168, 230, 207, 0.5);
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .threat {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(45deg, #ff4757, #ff3742);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+            animation: moveToCenter 5s linear infinite;
+            box-shadow: 0 0 15px rgba(255, 71, 87, 0.8);
+        }
+
+        @keyframes moveToCenter {
+            from {
+                transform: translate(0, 0);
+            }
+            to {
+                transform: translate(400px, 250px);
+            }
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #00ff41, #00cc33);
+            color: #000;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 255, 65, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn.disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        .notification {
+            position: absolute;
+            top: 120px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid #00ff41;
+            border-radius: 5px;
+            padding: 1rem;
+            max-width: 250px;
+            transform: translateX(300px);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #00ff41;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: sparkle 2s linear infinite;
+        }
+
+        @keyframes sparkle {
+            0% { opacity: 1; transform: scale(1) rotate(0deg); }
+            100% { opacity: 0; transform: scale(0) rotate(360deg); }
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            border: 3px solid #ff4757;
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            display: none;
+            z-index: 200;
+        }
+
+        .game-over.show {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+            to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+
+        .wave-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            font-weight: bold;
+            color: #00ff41;
+            text-shadow: 0 0 20px #00ff41;
+            opacity: 0;
+            animation: waveAlert 2s ease-out;
+        }
+
+        @keyframes waveAlert {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+        }
+
+        @media (max-width: 768px) {
+            .game-board {
+                width: 90%;
+                height: 400px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .score-board {
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- HUD -->
+        <div class="hud">
+            <div class="game-title">🛡️ MicroDefender</div>
+            <div class="score-board">
+                <div class="stat">
+                    <div class="stat-value" id="health">100</div>
+                    <div class="stat-label">System Health</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="score">0</div>
+                    <div class="stat-label">Score</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="wave">1</div>
+                    <div class="stat-label">Wave</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="credits">50</div>
+                    <div class="stat-label">Credits</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Board -->
+        <div class="game-board" id="gameBoard">
+            <!-- Service Slots -->
+            <div class="service-slot" style="top: 50px; left: 100px;" data-slot="0"></div>
+            <div class="service-slot" style="top: 200px; left: 200px;" data-slot="1"></div>
+            <div class="service-slot" style="top: 350px; left: 150px;" data-slot="2"></div>
+            <div class="service-slot" style="top: 100px; left: 400px;" data-slot="3"></div>
+            <div class="service-slot" style="top: 300px; left: 500px;" data-slot="4"></div>
+            <div class="service-slot" style="top: 150px; left: 650px;" data-slot="5"></div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <button class="btn" onclick="deployService('auth')">Deploy Auth (10💰)</button>
+            <button class="btn" onclick="deployService('user')">Deploy User (15💰)</button>
+            <button class="btn" onclick="deployService('gateway')">Deploy Gateway (20💰)</button>
+            <button class="btn" onclick="deployService('database')">Deploy DB (25💰)</button>
+            <button class="btn" onclick="startWave()">Start Wave</button>
+        </div>
+
+        <!-- Notification -->
+        <div class="notification" id="notification">
+            <div id="notificationText">Welcome to MicroDefender!</div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div class="game-over" id="gameOver">
+            <h2 style="color: #ff4757; margin-bottom: 1rem;">SYSTEM COMPROMISED!</h2>
+            <p>Your microservices architecture has been breached!</p>
+            <div style="margin: 1rem 0;">
+                <div>Final Score: <span id="finalScore">0</span></div>
+                <div>Waves Survived: <span id="finalWave">0</span></div>
+            </div>
+            <button class="btn" onclick="restartGame()">Restart System</button>
+        </div>
+    </div>
+
+    <script>
+        let gameState = {
+            health: 100,
+            score: 0,
+            wave: 1,
+            credits: 50,
+            services: {},
+            threats: [],
+            selectedSlot: null,
+            waveActive: false,
+            gameRunning: true
+        };
+
+        const serviceTypes = {
+            auth: { emoji: '🔐', cost: 10, damage: 15, range: 100 },
+            user: { emoji: '👥', cost: 15, damage: 20, range: 120 },
+            gateway: { emoji: '🌐', cost: 20, damage: 25, range: 150 },
+            database: { emoji: '💾', cost: 25, damage: 30, range: 80 }
+        };
+
+        const threatTypes = ['🦠', '🐛', '💣', '⚡', '👾'];
+
+        function updateHUD() {
+            document.getElementById('health').textContent = gameState.health;
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('wave').textContent = gameState.wave;
+            document.getElementById('credits').textContent = gameState.credits;
+        }
+
+        function showNotification(text, duration = 3000) {
+            const notification = document.getElementById('notification');
+            const notificationText = document.getElementById('notificationText');
+            
+            notificationText.textContent = text;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, duration);
+        }
+
+        function deployService(type) {
+            if (!gameState.gameRunning) return;
+            
+            const service = serviceTypes[type];
+            if (gameState.credits < service.cost) {
+                showNotification('❌ Insufficient credits!');
+                return;
+            }
+
+            // Find empty slot
+            const slots = document.querySelectorAll('.service-slot');
+            let emptySlot = null;
+            
+            for (let slot of slots) {
+                if (!slot.querySelector('.service')) {
+                    emptySlot = slot;
+                    break;
+                }
+            }
+
+            if (!emptySlot) {
+                showNotification('❌ No available slots!');
+                return;
+            }
+
+            // Deploy service
+            gameState.credits -= service.cost;
+            const serviceElement = document.createElement('div');
+            serviceElement.className = `service ${type}`;
+            serviceElement.textContent = service.emoji;
+            serviceElement.dataset.type = type;
+            
+            emptySlot.appendChild(serviceElement);
+            gameState.services[emptySlot.dataset.slot] = type;
+            
+            showNotification(`✅ ${type.toUpperCase()} service deployed!`);
+            updateHUD();
+            createParticles(emptySlot);
+        }
+
+        function createParticles(element) {
+            const rect = element.getBoundingClientRect();
+            for (let i = 0; i < 8; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = (rect.left + rect.width/2) + 'px';
+                particle.style.top = (rect.top + rect.height/2) + 'px';
+                particle.style.animationDelay = (i * 0.1) + 's';
+                document.body.appendChild(particle);
+                
+                setTimeout(() => {
+                    particle.remove();
+                }, 2000);
+            }
+        }
+
+        function spawnThreat() {
+            if (!gameState.waveActive || !gameState.gameRunning) return;
+
+            const threat = document.createElement('div');
+            threat.className = 'threat';
+            threat.textContent = threatTypes[Math.floor(Math.random() * threatTypes.length)];
+            
+            // Random starting position on edges
+            const side = Math.floor(Math.random() * 4);
+            const gameBoard = document.getElementById('gameBoard');
+            
+            switch(side) {
+                case 0: // top
+                    threat.style.left = Math.random() * 800 + 'px';
+                    threat.style.top = '0px';
+                    break;
+                case 1: // right
+                    threat.style.left = '800px';
+                    threat.style.top = Math.random() * 500 + 'px';
+                    break;
+                case 2: // bottom
+                    threat.style.left = Math.random() * 800 + 'px';
+                    threat.style.top = '500px';
+                    break;
+                case 3: // left
+                    threat.style.left = '0px';
+                    threat.style.top = Math.random() * 500 + 'px';
+                    break;
+            }
+            
+            gameBoard.appendChild(threat);
+            gameState.threats.push(threat);
+            
+            // Move threat towards center
+            setTimeout(() => {
+                if (threat.parentNode && gameState.gameRunning) {
+                    gameState.health -= 10;
+                    updateHUD();
+                    threat.remove();
+                    
+                    if (gameState.health <= 0) {
+                        gameOver();
+                    }
+                }
+            }, 5000);
+        }
+
+        function startWave() {
+            if (gameState.waveActive || !gameState.gameRunning) return;
+            
+            gameState.waveActive = true;
+            showWaveIndicator();
+            showNotification(`🌊 Wave ${gameState.wave} incoming!`);
+            
+            const threatCount = 5 + gameState.wave * 2;
+            let threatsSpawned = 0;
+            
+            const spawnInterval = setInterval(() => {
+                if (threatsSpawned >= threatCount || !gameState.gameRunning) {
+                    clearInterval(spawnInterval);
+                    setTimeout(() => {
+                        if (gameState.gameRunning) {
+                            endWave();
+                        }
+                    }, 8000);
+                    return;
+                }
+                
+                spawnThreat();
+                threatsSpawned++;
+            }, 1000);
+        }
+
+        function showWaveIndicator() {
+            const indicator = document.createElement('div');
+            indicator.className = 'wave-indicator';
+            indicator.textContent = `WAVE ${gameState.wave}`;
+            document.body.appendChild(indicator);
+            
+            setTimeout(() => {
+                indicator.remove();
+            }, 2000);
+        }
+
+        function endWave() {
+            gameState.waveActive = false;
+            gameState.wave++;
+            gameState.credits += 20 + (gameState.wave * 5);
+            gameState.score += 100 * gameState.wave;
+            
+            showNotification(`✅ Wave ${gameState.wave - 1} completed! +${20 + ((gameState.wave - 1) * 5)} credits`);
+            updateHUD();
+        }
+
+        function gameOver() {
+            gameState.gameRunning = false;
+            document.getElementById('finalScore').textContent = gameState.score;
+            document.getElementById('finalWave').textContent = gameState.wave - 1;
+            document.getElementById('gameOver').classList.add('show');
+        }
+
+        function restartGame() {
+            // Reset game state
+            gameState = {
+                health: 100,
+                score: 0,
+                wave: 1,
+                credits: 50,
+                services: {},
+                threats: [],
+                selectedSlot: null,
+                waveActive: false,
+                gameRunning: true
+            };
+            
+            // Clear board
+            document.querySelectorAll('.service').forEach(s => s.remove());
+            document.querySelectorAll('.threat').forEach(t => t.remove());
+            document.getElementById('gameOver').classList.remove('show');
+            
+            updateHUD();
+            showNotification('🚀 System rebooted! Deploy your microservices!');
+        }
+
+        // Service defense mechanism (simplified)
+        setInterval(() => {
+            if (!gameState.gameRunning) return;
+            
+            const services = document.querySelectorAll('.service');
+            const threats = document.querySelectorAll('.threat');
+            
+            services.forEach(service => {
+                threats.forEach(threat => {
+                    const serviceRect = service.getBoundingClientRect();
+                    const threatRect = threat.getBoundingClientRect();
+                    const distance = Math.sqrt(
+                        Math.pow(serviceRect.left - threatRect.left, 2) + 
+                        Math.pow(serviceRect.top - threatRect.top, 2)
+                    );
+                    
+                    const serviceType = serviceTypes[service.dataset.type];
+                    if (distance < serviceType.range && Math.random() > 0.7) {
+                        threat.remove();
+                        gameState.score += 10;
+                        createParticles(service);
+                        updateHUD();
+                    }
+                });
+            });
+        }, 500);
+
+        // Initialize game
+        updateHUD();
+        showNotification('🛡️ Welcome to MicroDefender! Deploy services and defend your architecture!', 5000);
+        
+        // Auto-start first wave after delay
+        setTimeout(() => {
+            if (gameState.gameRunning) {
+                showNotification('💡 Click "Start Wave" to begin the attack!');
+            }
+        }, 6000);
+    </script>
+</body>
+</html>

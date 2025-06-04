@@ -1,0 +1,21 @@
+---
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  become: yes
+
+- name: Upgrade all packages
+  apt:
+    upgrade: dist
+    autoremove: yes
+  become: yes
+
+- name: Install common packages
+  apt:
+    name:
+      - vim
+      - curl
+      - ufw
+    state: present
+  become: yes

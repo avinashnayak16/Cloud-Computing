@@ -1,0 +1,6 @@
+[webservers]
+192.168.209.129
+#192.168.209.130
+
+#[dbservers]
+#db1.example.com

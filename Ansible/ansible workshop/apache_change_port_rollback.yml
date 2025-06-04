@@ -1,0 +1,24 @@
+---
+- name: Roll back Apache port from 8080 to 80
+  hosts: webservers
+  become: yes
+  tasks:
+
+    - name: Change Apache port from 8080 to 80 in ports.conf
+      replace:
+        path: /etc/apache2/ports.conf
+        regexp: '^Listen\s+8080'
+        replace: 'Listen 80'
+        backup: yes
+
+    - name: Change Apache VirtualHost port from 8080 to 80
+      replace:
+        path: /etc/apache2/sites-available/000-default.conf
+        regexp: '(<VirtualHost \*:)(8080)(>)'
+        replace: '\g<1>80\g<3>'
+        backup: yes
+
+    - name: Restart Apache to apply changes
+      service:
+        name: apache2
+        state: restarted

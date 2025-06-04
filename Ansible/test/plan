@@ -1,0 +1,20 @@
+/home/avinash/Documents/cloud-computing/Ansible/test/
+├── inventory.yml
+├── playbook.yml
+├── roles/
+│   ├── common/
+│   │   ├── tasks/
+│   │   │   └── main.yml
+│   ├── app_server/
+│   │   ├── tasks/
+│   │   │   └── main.yml
+│   │   ├── files/
+│   │   │   ├── app.py
+│   │   │   └── requirements.txt
+│   │   ├── templates/
+│   │   │   └── app_config.j2
+│   ├── db_server/
+│   │   ├── tasks/
+│   │   │   └── main.yml
+│   │   ├── templates/
+│   │   │   └── mysql_setup.sql.j2

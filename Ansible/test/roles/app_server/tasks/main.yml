@@ -1,0 +1,64 @@
+---
+- name: Install Python and dependencies
+  apt:
+    name:
+      - python3
+      - python3-pip
+      - python3-venv
+    state: present
+  become: yes
+
+- name: Create application directory
+  file:
+    path: /opt/webapp
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Copy application code
+  copy:
+    src: app.py
+    dest: /opt/webapp/app.py
+    mode: '0644'
+  become: yes
+
+- name: Copy application configuration
+  template:
+    src: app_config.j2
+    dest: /opt/webapp/config.ini
+    mode: '0644'
+  become: yes
+
+- name: Install Python dependencies
+  pip:
+    requirements: /opt/webapp/requirements.txt
+    virtualenv: /opt/webapp/venv
+    virtualenv_python: python3
+  become: yes
+
+- name: Ensure ufw is enabled
+  ufw:
+    state: enabled
+    policy: deny
+  become: yes
+
+- name: Allow HTTP traffic
+  ufw:
+    rule: allow
+    port: 80
+    proto: tcp
+  become: yes
+
+- name: Allow database communication
+  ufw:
+    rule: allow
+    from_ip: "{{ hostvars['db_server']['ansible_host'] }}"
+    port: 3306
+    proto: tcp
+  become: yes
+
+- name: Start Flask application
+  command: /opt/webapp/venv/bin/python3 /opt/webapp/app.py
+  become: yes
+  async: 45
+  poll: 0

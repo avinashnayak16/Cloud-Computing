@@ -1,0 +1,58 @@
+---
+- name: Install MySQL server
+  apt:
+    name:
+      - mysql-server
+      - python3-mysqldb
+    state: present
+  become: yes
+
+- name: Start MySQL service
+  service:
+    name: mysql
+    state: started
+    enabled: yes
+  become: yes
+
+- name: Create MySQL database
+  mysql_db:
+    name: webapp_db
+    state: present
+  become: yes
+
+- name: Create MySQL user
+  mysql_user:
+    name: webapp_user
+    password: secure_password_123
+    priv: 'webapp_db.*:ALL'
+    host: "{{ hostvars['app_server']['ansible_host'] }}"
+    state: present
+  become: yes
+
+- name: Copy database schema
+  template:
+    src: mysql_setup.sql.j2
+    dest: /tmp/mysql_setup.sql
+    mode: '0644'
+  become: yes
+
+- name: Apply database schema
+  mysql_db:
+    name: webapp_db
+    state: import
+    target: /tmp/mysql_setup.sql
+  become: yes
+
+- name: Ensure ufw is enabled
+  ufw:
+    state: enabled
+    policy: deny
+  become: yes
+
+- name: Allow MySQL traffic from app server
+  ufw:
+    rule: allow
+    from_ip: "{{ hostvars['app_server']['ansible_host'] }}"
+    port: 3306
+    proto: tcp
+  become: yes

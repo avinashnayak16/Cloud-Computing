@@ -1,0 +1,25 @@
+---
+- name: Configure Web Server
+  hosts: webservers
+  become: yes
+
+  tasks:
+    - name: Install Apache
+      apt:
+        name: apache2
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Start and enable Apache service
+      service:
+        name: apache2
+        state: started
+        enabled: yes
+
+    - name: Deploy a custom index.html
+      copy:
+        content: "<h1>Welcome to Ansible-configured Web Server!</h1>"
+        dest: /var/www/html/index.html
+        owner: www-data
+        group: www-data
+        mode: '0644'
